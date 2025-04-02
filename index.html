@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Average Fight Game (미완성)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            flex-direction: column;
+        }
+
+        #game-container {
+            position: relative;
+            width: 1200px;  /* 맵 크기 */
+            height: 600px;  /* 맵 크기 */
+            background-color: #e0e0e0;
+            border: 2px solid #333;
+            overflow: hidden;
+        }
+
+        .player {
+            position: absolute;
+            bottom: 10px;
+            width: 50px;
+            height: 50px;
+            transition: left 0.1s, bottom 0.1s;
+        }
+
+        #player1 {
+            background-color: red;  /* 플레이어 1 색깔 */
+        }
+
+        #player2 {
+            background-color: blue;  /* 플레이어 2 색깔 */
+        }
+
+        #info-container {
+            display: flex;
+            justify-content: space-between;
+            width: 1200px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        .player-info {
+            font-size: 18px;
+        }
+
+        .player-info span {
+            font-weight: bold;
+        }
+
+        #start-button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        #start-button:hover {
+            background-color: #218838;
+        }
+
+        #game-status {
+            font-size: 20px;
+            font-weight: bold;
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="player1" class="player"></div>
+        <div id="player2" class="player"></div>
+    </div>
+    
+    <div id="info-container">
+        <div class="player-info">
+            <div>Player 1</div>
+            <div>HP: <span id="player1-hp">100/100</span></div>
+            <div>Buffs: <span id="player1-buffs">None</span></div>
+        </div>
+        <div class="player-info">
+            <div>Player 2</div>
+            <div>HP: <span id="player2-hp">100/100</span></div>
+            <div>Buffs: <span id="player2-buffs">None</span></div>
+        </div>
+    </div>
+
+    <div>
+        <button id="start-button">게임 시작</button>
+    </div>
+
+    <div id="game-status"></div>
+
+    <script>
+        let player1Health = 100;
+        let player2Health = 100;
+
+        let player1Buffs = [];
+        let player2Buffs = [];
+
+        const health1 = document.getElementById("player1-hp");
+        const health2 = document.getElementById("player2-hp");
+        const buffs1 = document.getElementById("player1-buffs");
+        const buffs2 = document.getElementById("player2-buffs");
+        const gameStatus = document.getElementById("game-status");
+
+        let player1X, player1Y;
+        let player2X, player2Y;
+
+        const player1 = document.getElementById("player1");
+        const player2 = document.getElementById("player2");
+
+        let gameOver = false;
+
+        // 키 누르고 있는 상태를 추적하는 객체
+        const isKeyPressed = {
+            w: false,
+            a: false,
+            s: false,
+            d: false,
+            ArrowUp: false,
+            ArrowLeft: false,
+            ArrowDown: false,
+            ArrowRight: false
+        };
+
+        // 랜덤 위치 설정 함수
+        function getRandomPosition() {
+            const x = Math.floor(Math.random() * (1150 - 50)); // 50 ~ 1150 범위
+            const y = Math.floor(Math.random() * (550 - 50)); // 50 ~ 550 범위
+            return { x, y };
+        }
+
+        // 플레이어 1 이동 (WASD)
+        function movePlayer1() {
+            if (gameOver) return;
+
+            if (isKeyPressed.w) {
+                if (player1Y < 600 && !isColliding(player1X, player1Y + 10, player2X, player2Y)) {
+                    player1Y += 10;
+                    player1.style.bottom = `${player1Y}px`;
+                }
+            }
+            if (isKeyPressed.s) {
+                if (player1Y > 0 && !isColliding(player1X, player1Y - 10, player2X, player2Y)) {
+                    player1Y -= 10;
+                    player1.style.bottom = `${player1Y}px`;
+                }
+            }
+            if (isKeyPressed.a) {
+                if (player1X > 0 && !isColliding(player1X - 10, player1Y, player2X, player2Y)) {
+                    player1X -= 10;
+                    player1.style.left = `${player1X}px`;
+                }
+            }
+            if (isKeyPressed.d) {
+                if (player1X < 1150 && !isColliding(player1X + 10, player1Y, player2X, player2Y)) {
+                    player1X += 10;
+                    player1.style.left = `${player1X}px`;
+                }
+            }
+        }
+
+        // 플레이어 2 이동 (화살표 키)
+        function movePlayer2() {
+            if (gameOver) return;
+
+            if (isKeyPressed.ArrowUp) {
+                if (player2Y < 600 && !isColliding(player2X, player2Y + 10, player1X, player1Y)) {
+                    player2Y += 10;
+                    player2.style.bottom = `${player2Y}px`;
+                }
+            }
+            if (isKeyPressed.ArrowDown) {
+                if (player2Y > 0 && !isColliding(player2X, player2Y - 10, player1X, player1Y)) {
+                    player2Y -= 10;
+                    player2.style.bottom = `${player2Y}px`;
+                }
+            }
+            if (isKeyPressed.ArrowLeft) {
+                if (player2X > 0 && !isColliding(player2X - 10, player2Y, player1X, player1Y)) {
+                    player2X -= 10;
+                    player2.style.left = `${player2X}px`;
+                }
+            }
+            if (isKeyPressed.ArrowRight) {
+                if (player2X < 1150 && !isColliding(player2X + 10, player2Y, player1X, player1Y)) {
+                    player2X += 10;
+                    player2.style.left = `${player2X}px`;
+                }
+            }
+        }
+
+        // 두 플레이어가 겹치는지 체크하는 함수
+        function isColliding(x1, y1, x2, y2) {
+            const distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+            return distance < 50; // 두 플레이어가 50px 이내에 있으면 겹침
+        }
+
+        // 플레이어 1 공격
+        function player1Attack() {
+            if (gameOver) return;
+            if (isCloseEnough()) {
+                player2Health -= 10; // Player 1의 공격 데미지
+                health2.textContent = `${player2Health}/100`;
+                checkGameOver();
+            }
+        }
+
+        // 플레이어 2 공격
+        function player2Attack() {
+            if (gameOver) return;
+            if (isCloseEnough()) {
+                player1Health -= 10; // Player 2의 공격 데미지
+                health1.textContent = `${player1Health}/100`;
+                checkGameOver();
+            }
+        }
+
+        // 공격이 가능할 때만 실행
+        function isCloseEnough() {
+            const distance = Math.sqrt(Math.pow(player1X - player2X, 2) + Math.pow(player1Y - player2Y, 2));
+            return distance < 60; // 60px 이내에 있어야 공격 가능
+        }
+
+        // 게임 종료 체크 함수
+        function checkGameOver() {
+            if (player1Health <= 0) {
+                gameOver = true;
+                gameStatus.textContent = "게임 종료! Player 2 승리!";
+                disableControls();
+            } else if (player2Health <= 0) {
+                gameOver = true;
+                gameStatus.textContent = "게임 종료! Player 1 승리!";
+                disableControls();
+            }
+        }
+
+        // 게임 종료 후 키 입력 비활성화
+        function disableControls() {
+            document.removeEventListener("keydown", movePlayer1);
+            document.removeEventListener("keydown", movePlayer2);
+        }
+
+        // 게임 시작
+        document.getElementById("start-button").addEventListener("click", function() {
+            const startPosition1 = getRandomPosition();
+            const startPosition2 = getRandomPosition();
+
+            player1X = startPosition1.x;
+            player1Y = startPosition1.y;
+            player2X = startPosition2.x;
+            player2Y = startPosition2.y;
+
+            player1.style.left = `${player1X}px`;
+            player1.style.bottom = `${player1Y}px`;
+            player2.style.left = `${player2X}px`;
+            player2.style.bottom = `${player2Y}px`;
+
+            player1Health = 100;
+            player2Health = 100;
+            health1.textContent = `${player1Health}/100`;
+            health2.textContent = `${player2Health}/100`;
+
+            buffs1.textContent = 'None';
+            buffs2.textContent = 'None';
+
+            gameOver = false;
+            gameStatus.textContent = "";
+
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'w' || event.key === 'a' || event.key === 's' || event.key === 'd') {
+                    isKeyPressed[event.key] = true;
+                    movePlayer1();
+                }
+                if (event.key === 'ArrowUp' || event.key === 'ArrowLeft' || event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+                    isKeyPressed[event.key] = true;
+                    movePlayer2();
+                }
+                if (event.key === 'z' || event.key === 'Z') {
+                    player1Attack();
+                }
+                if (event.key === '/' || event.key === '?') {
+                    player2Attack();
+                }
+            });
+
+            document.addEventListener('keyup', function(event) {
+                isKeyPressed[event.key] = false;
+            });
+        });
+    </script>
+</body>
+</html>
